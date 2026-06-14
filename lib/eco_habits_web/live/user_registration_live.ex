@@ -47,7 +47,7 @@ defmodule EcoHabitsWeb.UserRegistrationLive do
 
     socket =
       socket
-      |> assign(trigger_submit: false, check_errors: false)
+      |> assign(check_errors: false)
       |> assign_form(changeset)
 
     {:ok, socket, temporary_assigns: [form: nil]}
@@ -58,18 +58,14 @@ defmodule EcoHabitsWeb.UserRegistrationLive do
     {:noreply, assign_form(socket, Map.put(changeset, :action, :validate))}
   end
 
-  # Cria o usuário e envia e-mail de confirmação (RF01)
+  # Cria o usuário e redireciona para o login (RF01)
   def handle_event("save", %{"user" => user_params}, socket) do
     case Accounts.register_user(user_params) do
-      {:ok, user} ->
-        {:ok, _} =
-          Accounts.deliver_user_confirmation_instructions(
-            user,
-            &url(~p"/users/confirm/#{&1}")
-          )
-
-        changeset = Accounts.change_user_registration(user)
-        {:noreply, socket |> assign(trigger_submit: true) |> assign_form(changeset)}
+      {:ok, _user} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Conta criada com sucesso! Faça login para continuar.")
+         |> redirect(to: ~p"/users/log_in")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, socket |> assign(check_errors: true) |> assign_form(changeset)}

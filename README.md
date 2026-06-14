@@ -12,11 +12,11 @@ Desenvolvida com **Elixir/Phoenix + LiveView** para a disciplina **Programação
 |---|---|---|
 | Elixir | 1.15+ | Linguagem principal |
 | Phoenix Framework | 1.8 | Framework web |
-| Phoenix LiveView | 1.2 | Interatividade em tempo real (RT01, RT05) |
-| Ecto + PostgreSQL | 3.14 | Banco de dados relacional (RT02, RT06) |
-| Tailwind CSS + DaisyUI | — | Estilização (RT04) |
+| Phoenix LiveView | 1.2 | Interatividade em tempo real (RF07, RF09) |
+| Ecto + PostgreSQL | 3.14 | Banco de dados relacional |
+| Tailwind CSS + DaisyUI | — | Estilização |
 | bcrypt_elixir | 3.x | Hash de senhas |
-| Phoenix PubSub | 2.x | Atualizações em tempo real (RT05) |
+| Phoenix PubSub | 2.x | Feed da comunidade em tempo real (RF09) |
 
 ---
 
@@ -101,10 +101,31 @@ Acesse em **[http://localhost:4000](http://localhost:4000)**
 - **RF02** — Login com sessão persistente ("lembrar de mim") e logout
 - **RF03** — Página de perfil com nome, bio editável e pontuação total acumulada. Inclui sistema de níveis (🌱 → 🥈 → 🥇 → 🏆) com barra de progresso
 
-### Módulo B — Gestão de Hábitos (parcial)
+### Módulo B — Gestão de Hábitos
 
-- **RF04** — Cadastro de hábitos com nome, descrição, categoria e pontuação
-- **RF05** — Listagem com filtro por categoria via pills clicáveis
+- **RF04** — Cadastro de hábitos com nome, descrição, categoria e pontuação (1–100 pts)
+- **RF05** — Listagem com filtro por categoria via pills clicáveis (Alimentação, Transporte, Energia, Água, Resíduos)
+- **RF06** — Edição e remoção de hábitos próprios, com confirmação antes de excluir; proteção para que usuários não editem/removam hábitos alheios
+
+### Módulo C — Registro e Acompanhamento
+
+- **RF07** — Check-in diário: lista todos os hábitos disponíveis e permite registrar a prática do dia. Previne duplicatas por índice único no banco e desabilita o botão de hábitos já registrados hoje
+- **RF08** — Dashboard pessoal com total de pontos, contagem de check-ins, semanas ativas, gráfico de barras da pontuação semanal e histórico completo de check-ins
+- **RF09** — Feed da comunidade em tempo real via Phoenix PubSub: exibe os check-ins mais recentes de todos os usuários e se atualiza automaticamente (sem recarregar a página) sempre que qualquer usuário registra um novo hábito
+
+---
+
+## Rotas principais
+
+| Rota | LiveView | Requisito |
+|---|---|---|
+| `/users/register` | `UserRegistrationLive` | RF01 |
+| `/users/log_in` | `UserLoginLive` | RF02 |
+| `/profile` | `ProfileLive` | RF03 |
+| `/habitos` | `HabitLive.Index` | RF04, RF05, RF06 |
+| `/checkin` | `CheckInLive.Index` | RF07 |
+| `/dashboard` | `DashboardLive.Index` | RF08 |
+| `/feed` | `FeedLive.Index` | RF09 |
 
 ---
 
