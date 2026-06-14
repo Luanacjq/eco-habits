@@ -52,6 +52,18 @@ defmodule EcoHabitsWeb.Layouts do
             Hábitos
             <span class="absolute -bottom-[18px] left-0 right-0 h-0.5 bg-primary rounded-full scale-x-0 group-hover:scale-x-100 transition-transform origin-center" />
           </.link>
+          <.link navigate={~p"/check-in"} class="text-sm font-medium text-base-content/60 hover:text-primary transition-colors relative group">
+            Check-in
+            <span class="absolute -bottom-[18px] left-0 right-0 h-0.5 bg-primary rounded-full scale-x-0 group-hover:scale-x-100 transition-transform origin-center" />
+          </.link>
+          <.link navigate={~p"/painel"} class="text-sm font-medium text-base-content/60 hover:text-primary transition-colors relative group">
+            Painel
+            <span class="absolute -bottom-[18px] left-0 right-0 h-0.5 bg-primary rounded-full scale-x-0 group-hover:scale-x-100 transition-transform origin-center" />
+          </.link>
+          <.link navigate={~p"/feed"} class="text-sm font-medium text-base-content/60 hover:text-primary transition-colors relative group">
+            Feed
+            <span class="absolute -bottom-[18px] left-0 right-0 h-0.5 bg-primary rounded-full scale-x-0 group-hover:scale-x-100 transition-transform origin-center" />
+          </.link>
           <.link navigate={~p"/perfil"} class="text-sm font-medium text-base-content/60 hover:text-primary transition-colors relative group">
             Perfil
             <span class="absolute -bottom-[18px] left-0 right-0 h-0.5 bg-primary rounded-full scale-x-0 group-hover:scale-x-100 transition-transform origin-center" />
@@ -80,6 +92,10 @@ defmodule EcoHabitsWeb.Layouts do
                   <p class="text-xs text-base-content/50 truncate">{@current_scope.user.email}</p>
                 </div>
                 <ul class="menu menu-sm p-1.5 gap-0.5">
+                  <li><.link navigate={~p"/habitos"} class="rounded-lg">🌱 Hábitos</.link></li>
+                  <li><.link navigate={~p"/check-in"} class="rounded-lg">✓ Check-in</.link></li>
+                  <li><.link navigate={~p"/painel"} class="rounded-lg">📊 Meu painel</.link></li>
+                  <li><.link navigate={~p"/feed"} class="rounded-lg">🌍 Feed</.link></li>
                   <li><.link navigate={~p"/perfil"} class="rounded-lg">👤 Meu perfil</.link></li>
                   <li><.link navigate={~p"/users/settings"} class="rounded-lg">⚙️ Configurações</.link></li>
                   <li>

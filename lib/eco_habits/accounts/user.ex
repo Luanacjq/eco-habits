@@ -76,12 +76,12 @@ defmodule EcoHabits.Accounts.User do
   # Verifica se a senha bate com o hash armazenado
   def valid_password?(%__MODULE__{hashed_password: hashed_password}, password)
       when is_binary(hashed_password) and byte_size(password) > 0 do
-    Bcrypt.verify_pass(password, hashed_password)
+    Pbkdf2.verify_pass(password, hashed_password)
   end
 
   def valid_password?(_, _) do
     # Roda o algoritmo mesmo sem usuário válido para evitar timing attacks
-    Bcrypt.no_user_verify()
+    Pbkdf2.no_user_verify()
     false
   end
 
@@ -107,7 +107,7 @@ defmodule EcoHabits.Accounts.User do
     if hash_password? && password && changeset.valid? do
       changeset
       |> validate_length(:password, max: 72, count: :bytes)
-      |> put_change(:hashed_password, Bcrypt.hash_pwd_salt(password))
+      |> put_change(:hashed_password, Pbkdf2.hash_pwd_salt(password))
       |> delete_change(:password)
     else
       changeset

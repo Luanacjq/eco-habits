@@ -31,6 +31,9 @@ defmodule EcoHabitsWeb.HabitLive.Index do
       |> assign(:user, socket.assigns.current_scope.user)
       |> assign(:show_form, false)
       |> assign(:form, nil)
+      # RF06 — id do hábito em edição (nil quando criando) e id aguardando confirmação de exclusão
+      |> assign(:editing_id, nil)
+      |> assign(:confirm_delete_id, nil)
 
     {:ok, socket}
   end
@@ -53,18 +56,20 @@ defmodule EcoHabitsWeb.HabitLive.Index do
             phx-click="toggle_form"
             class={[
               "btn btn-sm rounded-xl transition-all",
-              if(@show_form, do: "btn-ghost", else: "btn-primary shadow-lg shadow-primary/20")
+              if(@show_form && is_nil(@editing_id), do: "btn-ghost", else: "btn-primary shadow-lg shadow-primary/20")
             ]}
           >
-            {if @show_form, do: "✕ Fechar", else: "+ Novo hábito"}
+            {if @show_form && is_nil(@editing_id), do: "✕ Fechar", else: "+ Novo hábito"}
           </button>
         </div>
 
-        <%!-- Formulário de cadastro (RF04) com animação de entrada --%>
+        <%!-- Formulário de cadastro (RF04) e edição (RF06) com animação de entrada --%>
         <div :if={@show_form} class="glass-card rounded-3xl p-6 anim-slide-down">
           <h2 class="font-semibold text-base mb-4 flex items-center gap-2">
-            <span class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-sm">+</span>
-            Cadastrar novo hábito
+            <span class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-sm">
+              {if @editing_id, do: "✎", else: "+"}
+            </span>
+            {if @editing_id, do: "Editar hábito", else: "Cadastrar novo hábito"}
           </h2>
           <.form for={@form} id="habit_form" phx-submit="save_habit" phx-change="validate_habit">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5">
@@ -77,9 +82,14 @@ defmodule EcoHabitsWeb.HabitLive.Index do
               <.input field={@form[:category]} type="select" label="Categoria" options={category_options(@category_labels)} prompt="Selecione..." required />
               <.input field={@form[:points]} type="number" label="Pontos (1–100)" placeholder="10" min="1" max="100" required />
             </div>
-            <.button class="btn btn-primary btn-sm rounded-xl mt-2 shadow-md shadow-primary/20" phx-disable-with="Salvando...">
-              Salvar hábito
-            </.button>
+            <div class="flex gap-2 mt-2">
+              <.button class="btn btn-primary btn-sm rounded-xl shadow-md shadow-primary/20" phx-disable-with="Salvando...">
+                {if @editing_id, do: "Salvar alterações", else: "Salvar hábito"}
+              </.button>
+              <button :if={@editing_id} type="button" phx-click="cancel_edit" class="btn btn-ghost btn-sm rounded-xl">
+                Cancelar
+              </button>
+            </div>
           </.form>
         </div>
 
@@ -158,7 +168,43 @@ defmodule EcoHabitsWeb.HabitLive.Index do
                 <div class="w-5 h-5 rounded-full bg-base-300 flex items-center justify-center text-xs font-bold">
                   {String.first(habit.user.name) |> String.upcase()}
                 </div>
-                <span class="text-xs text-base-content/40 truncate">{habit.user.name}</span>
+                <span class="text-xs text-base-content/40 truncate flex-1">{habit.user.name}</span>
+              </div>
+
+              <%!-- Ações de editar/remover, visíveis apenas para o dono do hábito (RF06) --%>
+              <div :if={habit.user_id == @user.id} class="flex items-center gap-2 pt-1">
+                <%!-- Modo normal: botões editar e remover --%>
+                <div :if={@confirm_delete_id != habit.id} class="flex items-center gap-2 w-full">
+                  <button
+                    phx-click="edit_habit"
+                    phx-value-id={habit.id}
+                    class="btn btn-ghost btn-xs gap-1 text-base-content/50 hover:text-primary"
+                  >
+                    <.icon name="hero-pencil-square-micro" class="size-3.5" /> Editar
+                  </button>
+                  <button
+                    phx-click="ask_delete"
+                    phx-value-id={habit.id}
+                    class="btn btn-ghost btn-xs gap-1 text-base-content/50 hover:text-error"
+                  >
+                    <.icon name="hero-trash-micro" class="size-3.5" /> Remover
+                  </button>
+                </div>
+
+                <%!-- Modo confirmação de exclusão (RF06) --%>
+                <div :if={@confirm_delete_id == habit.id} class="flex items-center gap-2 w-full anim-fade-up">
+                  <span class="text-xs text-base-content/60 flex-1">Remover este hábito?</span>
+                  <button
+                    phx-click="delete_habit"
+                    phx-value-id={habit.id}
+                    class="btn btn-error btn-xs rounded-lg"
+                  >
+                    Sim, remover
+                  </button>
+                  <button phx-click="cancel_delete" class="btn btn-ghost btn-xs rounded-lg">
+                    Cancelar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -170,17 +216,19 @@ defmodule EcoHabitsWeb.HabitLive.Index do
   end
 
   def handle_event("toggle_form", _params, socket) do
-    if socket.assigns.show_form do
+    if socket.assigns.show_form && is_nil(socket.assigns.editing_id) do
       {:noreply, assign(socket, show_form: false, form: nil)}
     else
       changeset = Habits.change_habit(%Habit{})
-      {:noreply, assign(socket, show_form: true, form: to_form(changeset))}
+      {:noreply, assign(socket, show_form: true, editing_id: nil, form: to_form(changeset))}
     end
   end
 
   def handle_event("validate_habit", %{"habit" => params}, socket) do
+    base = if socket.assigns.editing_id, do: Habits.get_habit!(socket.assigns.editing_id), else: %Habit{}
+
     form =
-      %Habit{}
+      base
       |> Habits.change_habit(params)
       |> Map.put(:action, :validate)
       |> to_form()
@@ -188,23 +236,81 @@ defmodule EcoHabitsWeb.HabitLive.Index do
     {:noreply, assign(socket, form: form)}
   end
 
-  # Salva o hábito vinculado ao usuário logado (RF04)
+  # Salva o hábito: cria novo (RF04) ou atualiza existente (RF06)
   def handle_event("save_habit", %{"habit" => params}, socket) do
-    params = Map.put(params, "user_id", socket.assigns.user.id)
+    case socket.assigns.editing_id do
+      nil ->
+        params = Map.put(params, "user_id", socket.assigns.user.id)
 
-    case Habits.create_habit(params) do
-      {:ok, _habit} ->
-        socket =
-          socket
-          |> assign(:habits, Habits.list_habits(socket.assigns.category_filter))
-          |> assign(:show_form, false)
-          |> assign(:form, nil)
-          |> put_flash(:info, "Hábito cadastrado!")
+        case Habits.create_habit(params) do
+          {:ok, _habit} ->
+            {:noreply, refresh_habits(socket, "Hábito cadastrado!")}
 
-        {:noreply, socket}
+          {:error, changeset} ->
+            {:noreply, assign(socket, form: to_form(changeset))}
+        end
 
-      {:error, changeset} ->
-        {:noreply, assign(socket, form: to_form(changeset))}
+      id ->
+        habit = Habits.get_habit!(id)
+
+        # Garante que o usuário só edite hábitos próprios (RF06)
+        if habit.user_id == socket.assigns.user.id do
+          case Habits.update_habit(habit, params) do
+            {:ok, _habit} ->
+              {:noreply, refresh_habits(socket, "Hábito atualizado!")}
+
+            {:error, changeset} ->
+              {:noreply, assign(socket, form: to_form(changeset))}
+          end
+        else
+          {:noreply, put_flash(socket, :error, "Você não pode editar esse hábito.")}
+        end
+    end
+  end
+
+  # Abre o formulário preenchido com os dados do hábito a editar (RF06)
+  def handle_event("edit_habit", %{"id" => id}, socket) do
+    habit = Habits.get_habit!(id)
+
+    if habit.user_id == socket.assigns.user.id do
+      socket =
+        socket
+        |> assign(:show_form, true)
+        |> assign(:editing_id, habit.id)
+        |> assign(:confirm_delete_id, nil)
+        |> assign(:form, to_form(Habits.change_habit(habit)))
+
+      {:noreply, socket}
+    else
+      {:noreply, put_flash(socket, :error, "Você não pode editar esse hábito.")}
+    end
+  end
+
+  def handle_event("cancel_edit", _params, socket) do
+    {:noreply, assign(socket, show_form: false, editing_id: nil, form: nil)}
+  end
+
+  # Primeiro clique em "Remover": pede confirmação (RF06)
+  def handle_event("ask_delete", %{"id" => id}, socket) do
+    {:noreply, assign(socket, confirm_delete_id: String.to_integer(id))}
+  end
+
+  def handle_event("cancel_delete", _params, socket) do
+    {:noreply, assign(socket, confirm_delete_id: nil)}
+  end
+
+  # Confirma a remoção do hábito do próprio usuário (RF06)
+  def handle_event("delete_habit", %{"id" => id}, socket) do
+    habit = Habits.get_habit!(id)
+
+    if habit.user_id == socket.assigns.user.id do
+      {:ok, _} = Habits.delete_habit(habit)
+      {:noreply, refresh_habits(socket, "Hábito removido.")}
+    else
+      {:noreply,
+       socket
+       |> assign(:confirm_delete_id, nil)
+       |> put_flash(:error, "Você não pode remover esse hábito.")}
     end
   end
 
@@ -212,6 +318,17 @@ defmodule EcoHabitsWeb.HabitLive.Index do
   def handle_event("filter", %{"category" => category}, socket) do
     filter = if category == "", do: nil, else: category
     {:noreply, assign(socket, category_filter: filter, habits: Habits.list_habits(filter))}
+  end
+
+  # Recarrega a lista respeitando o filtro atual e fecha formulários (RF04/RF06)
+  defp refresh_habits(socket, message) do
+    socket
+    |> assign(:habits, Habits.list_habits(socket.assigns.category_filter))
+    |> assign(:show_form, false)
+    |> assign(:editing_id, nil)
+    |> assign(:confirm_delete_id, nil)
+    |> assign(:form, nil)
+    |> put_flash(:info, message)
   end
 
   defp category_options(labels) do

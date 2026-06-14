@@ -58,6 +58,9 @@ defmodule EcoHabitsWeb.Router do
       on_mount: [{EcoHabitsWeb.UserAuth, :require_authenticated}] do
       live "/perfil", ProfileLive, :show
       live "/habitos", HabitLive.Index, :index
+      live "/check-in", CheckInLive.Index, :index
+      live "/painel", DashboardLive.Index, :index
+      live "/feed", FeedLive.Index, :index
       live "/users/settings", UserSettingsLive, :edit
       live "/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email
     end
